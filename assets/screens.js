@@ -27,11 +27,52 @@ Game.Screen.startScreen = {
 
 // Define our playing screen
 Game.Screen.playScreen = {
-	enter: function() { console.log("Entered play screen"); },
+	_map: null,
+	enter: function() { 
+		console.log("Entered play screen"); 
+
+		var map = [];
+		for (var x=0; x<80; x++) {
+			// Create the nested array for the y values
+			map.push([]);
+			for (var y=0; y<24; y++) {
+				map[x].push(Game.Tile.nullTile);
+			}
+		}
+
+		// Set up the map generator
+		var generator = new ROT.Map.Cellular(80, 24);
+		// randomize() takes an argument which is the probability of a given cell starting as a 1 vs a 0
+		generator.randomize(0.5);
+
+		// Iteratively smoothen the map
+		var totalIterations = 3;
+		for (var i=0; i<totalIterations - 1; i++) {
+			generator.create();
+		}
+
+		// Smoothen one last time and then update the map
+		// The callback function here is called after the smoothing
+		generator.create(function(x,y,v) {
+			if (v === 1) {
+				map[x][y] = Game.Tile.floorTile;
+			} else {
+				map[x][y] = Game.Tile.wallTile;
+			}
+		});
+
+		this._map = new Game.Map(map)
+	},
 	exit: function() { console.log("Exited play screen"); },
 	render: function(display) {
-		display.drawText(3,5, "%c{red}%b{white}This game is so much fun!");
-		display.drawText(4,6, "Press [Enter] to win, or [Esc] to lose!");
+		// Iterate through all map tiles
+		for (var x=0; x < this._map.getWidth(); x++) {
+			for (var y=0; y < this._map.getHeight(); y++) {
+				// Fetch the glyph and draw it
+				var glyph = this._map.getTile(x, y).getGlyph();
+				display.draw(x, y, glyph.getChar(), glyph.getForeground(), glyph.getBackground());
+			}
+		}
 	},
 	handleInput: function(inputType, inputData) {
 		if (inputType === 'keydown') {
