@@ -16,12 +16,6 @@ var Game = {
 				if (game._currentScreen !== null) {
 					// Send event type and data to screen
 					game._currentScreen.handleInput(event, e);
-
-					// Clear the screen
-					game._display.clear();
-
-					// And re-render
-					game._currentScreen.render(game._display);
 				}
 			});
 		}
@@ -53,8 +47,12 @@ var Game = {
 		this._currentScreen = screen;
 		if (!this._currentScreen !== null) {
 			this._currentScreen.enter();
-			this._currentScreen.render(this._display);
+			this.refresh();
 		}
+	},
+	refresh: function() {
+		this._display.clear();
+		this._currentScreen.render(this._display);
 	}
 }
 
