@@ -28,8 +28,7 @@ Game.Screen.startScreen = {
 // Define our playing screen
 Game.Screen.playScreen = {
 	_map: null,
-	_centerX: 0,
-	_centerY: 0,
+	_player: null,
 	enter: function() { 
 		console.log("Entered play screen"); 
 
@@ -65,49 +64,49 @@ Game.Screen.playScreen = {
 			}
 		});
 
-		this._map = new Game.Map(map)
+		this._map = new Game.Map(map);
+
+		// Create our player and set the position
+		this._player = new Game.Entity(Game.PlayerTemplate);
+		var position = this._map.getRandomFloorPosition();
+		this._player.setX(position.x);
+		this._player.setY(position.y);
 	},
 	exit: function() { console.log("Exited play screen"); },
-	move: function(dX, dY) {
-		// Get the minimum between map width/height and the movement position (prevents out-of-bounds max)
-		// Then get the maximum between 0 and the movement position (prevents out-of-bounds min)
-		this._centerX = Math.max(0, Math.min(this._map.getWidth() - 1, this._centerX + dX));
-		this._centerY = Math.max(0, Math.min(this._map.getHeight() - 1, this._centerY + dY));
-	},
 	render: function(display) {
 		// Iterate through all map tiles
 		var screenWidth = Game.getScreenWidth();
 		var screenHeight = Game.getScreenHeight();
 
 		// Minimum left side check
-		var topLeftX = Math.max(0, this._centerX - (screenWidth / 2));
+		var topLeftX = Math.max(0, this._player.getX() - (screenWidth / 2));
 		// Minimum right side check
 		topLeftX = Math.min(topLeftX, this._map.getWidth() - screenWidth);
 		
 		// Minimum top side check
-		var topLeftY = Math.max(0, this._centerY - (screenHeight / 2));
+		var topLeftY = Math.max(0, this._player.getY() - (screenHeight / 2));
 		// Minimum bottom side check
 		topLeftY = Math.min(topLeftY, this._map.getHeight() - screenHeight);
 
 		for (var x=topLeftX; x < topLeftX + screenWidth; x++) {
 			for (var y=topLeftY; y < topLeftY + screenHeight; y++) {
 				// Fetch the glyph and draw it
-				var glyph = this._map.getTile(x, y).getGlyph();
+				var tile = this._map.getTile(x, y);
 				// Subtract topLeft value for rendering (because the screen is still at 0,0 even if the map is at 20,20)
 				display.draw(x - topLeftX, 
 							 y - topLeftY, 
-							 glyph.getChar(), 
-							 glyph.getForeground(), 
-							 glyph.getBackground());
+							 tile.getChar(), 
+							 tile.getForeground(), 
+							 tile.getBackground());
 			}
 		}
 
 		// Finally, render cursor
-		display.draw(this._centerX - topLeftX,
-					 this._centerY - topLeftY,
-					 '@',
-					 'white',
-					 'black');
+		display.draw(this._player.getX() - topLeftX,
+					 this._player.getY() - topLeftY,
+					 this._player.getChar(),
+					 this._player.getForeground(),
+					 this._player.getBackground());
 	},
 	handleInput: function(inputType, inputData) {
 		if (inputType === 'keydown') {
@@ -129,6 +128,13 @@ Game.Screen.playScreen = {
 				this.move(0,1);
 			}
 		}		   
+	},
+	move: function(dX, dY) {
+		var newX = this._player.getX() + dX;
+		var newY = this._player.getY() + dY;
+		// because tryMove contains our bounds-checking and movement code,
+		// we can simply defer to the function and trust it to handle everything
+		this._player.tryMove(newX, newY, this._map);
 	}
 }
 
