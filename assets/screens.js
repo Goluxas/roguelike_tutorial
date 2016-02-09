@@ -32,41 +32,13 @@ Game.Screen.playScreen = {
 	enter: function() { 
 		console.log("Entered play screen"); 
 
-		var map = [];
-		var mapWidth = 100;
-		var mapHeight = 48;
-		for (var x=0; x < mapWidth; x++) {
-			// Create the nested array for the y values
-			map.push([]);
-			for (var y=0; y < mapHeight; y++) {
-				map[x].push(Game.Tile.nullTile);
-			}
-		}
+		var width = 100;
+		var height = 48;
+		var depth = 6;
 
-		// Set up the map generator
-		var generator = new ROT.Map.Cellular(mapWidth, mapHeight);
-		// randomize() takes an argument which is the probability of a given cell starting as a 1 vs a 0
-		generator.randomize(0.5);
-
-		// Iteratively smoothen the map
-		var totalIterations = 3;
-		for (var i=0; i<totalIterations - 1; i++) {
-			generator.create();
-		}
-
-		// Smoothen one last time and then update the map
-		// The callback function here is called after the smoothing
-		generator.create(function(x,y,v) {
-			if (v === 1) {
-				map[x][y] = Game.Tile.floorTile;
-			} else {
-				map[x][y] = Game.Tile.wallTile;
-			}
-		});
-
-		// Create our player and set the position
+		var tiles = new Game.Builder(width, height, depth).getTiles();
 		this._player = new Game.Entity(Game.PlayerTemplate);
-		this._map = new Game.Map(map, this._player);
+		this._map = new Game.Map(tiles, this._player);
 
 		// Start the map's engine
 		this._map.getEngine().start();
@@ -90,7 +62,7 @@ Game.Screen.playScreen = {
 		for (var x=topLeftX; x < topLeftX + screenWidth; x++) {
 			for (var y=topLeftY; y < topLeftY + screenHeight; y++) {
 				// Fetch the glyph and draw it
-				var tile = this._map.getTile(x, y);
+				var tile = this._map.getTile(x, y, this._player.getZ());
 				// Subtract topLeft value for rendering (because the screen is still at 0,0 even if the map is at 20,20)
 				display.draw(x - topLeftX, 
 							 y - topLeftY, 
@@ -107,7 +79,8 @@ Game.Screen.playScreen = {
 			// only render the entity if it would show up on screen
 			if (entity.getX() >= topLeftX && entity.getY() >= topLeftY &&
 				entity.getX() < topLeftX + screenWidth &&
-				entity.getY() < topLeftY + screenHeight) {
+				entity.getY() < topLeftY + screenHeight &&
+				entity.getZ() == this._player.getZ()) {
 				display.draw(entity.getX() - topLeftX,
 							 entity.getY() - topLeftY,
 							 entity.getChar(),
@@ -139,26 +112,43 @@ Game.Screen.playScreen = {
 			} else {
 				// Movement
 				if (inputData.keyCode == ROT.VK_LEFT || inputData.keyCode == ROT.VK_A) {
-					this.move(-1,0);
+					this.move(-1,0,0);
 				} else if (inputData.keyCode == ROT.VK_RIGHT || inputData.keyCode == ROT.VK_D) {
-					this.move(1,0);
+					this.move(1,0,0);
 				} else if (inputData.keyCode == ROT.VK_UP || inputData.keyCode == ROT.VK_W) {
-					this.move(0,-1);
+					this.move(0,-1,0);
 				} else if (inputData.keyCode == ROT.VK_DOWN || inputData.keyCode == ROT.VK_S) {
-					this.move(0,1);
+					this.move(0,1,0);
+				} else {
+					// Not a valid key
+					return;
 				}
 				
 				// Unlock the engine
 				this._map.getEngine().unlock();
 			}
-		}		   
+		} else if (inputType == 'keypress') {
+			var keyChar = String.fromCharCode(inputData.charCode);
+			if (keyChar == '>') {
+				this.move(0, 0, 1);
+			} else if (keyChar == '<') {
+				this.move(0, 0, -1);
+			} else {
+				// Not a valid key
+				return;
+			}
+
+			// Unlock the engine
+			this._map.getEngine().unlock();
+		}
 	},
-	move: function(dX, dY) {
+	move: function(dX, dY, dZ) {
 		var newX = this._player.getX() + dX;
 		var newY = this._player.getY() + dY;
+		var newZ = this._player.getZ() + dZ;
 		// because tryMove contains our bounds-checking and movement code,
 		// we can simply defer to the function and trust it to handle everything
-		this._player.tryMove(newX, newY, this._map);
+		this._player.tryMove(newX, newY, newZ, this._map);
 	}
 }
 

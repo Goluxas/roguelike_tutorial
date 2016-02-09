@@ -23,7 +23,7 @@ var Game = {
 		
 		// Bind keyboard input events
 		bindEventToScreen('keydown');
-		bindEventToScreen('keyup');
+		//bindEventToScreen('keyup');
 		bindEventToScreen('keypress');
 	},
 	getDisplay: function() {

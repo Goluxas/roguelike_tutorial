@@ -8,6 +8,10 @@ Game.Glyph = function(properties) {
 	this._background = properties['background'] || 'black';
 };
 
+Game.Glyph.prototype.setChar = function(c) {
+	this._char = c;
+}
+
 // Create standard getters for glyphs
 Game.Glyph.prototype.getChar = function() {
 	return this._char;
