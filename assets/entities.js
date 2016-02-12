@@ -183,6 +183,17 @@ Game.Mixins.MessageRecipient = {
 	}
 }
 
+Game.Mixins.Sight = {
+	name: 'Sight',
+	groupName: 'Sight',
+	init: function(template) {
+		this._sightRadius = template['sightRadius'] || 5;
+	},
+	getSightRadius: function() {
+		return this._sightRadius;
+	}
+}
+
 
 // Message sending function
 Game.sendMessage = function(recipient, message, args) {
@@ -223,11 +234,13 @@ Game.PlayerTemplate = {
 	background: 'black',
 	maxHP: 40,
 	attackValue: 10,
+	sightRadius: 6,
 	mixins: [Game.Mixins.Moveable, 
 			 Game.Mixins.PlayerActor,
 			 Game.Mixins.Destructible,
 			 Game.Mixins.Attacker,
-			 Game.Mixins.MessageRecipient]
+			 Game.Mixins.MessageRecipient,
+			 Game.Mixins.Sight]
 }
 
 // Fungus

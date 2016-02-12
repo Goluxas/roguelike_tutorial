@@ -59,16 +59,28 @@ Game.Screen.playScreen = {
 		// Minimum bottom side check
 		topLeftY = Math.min(topLeftY, this._map.getHeight() - screenHeight);
 
+		// This will keep track of all visible map cells
+		var visibleCells = {};
+		// Find all visible cells and update the object
+		this._map.getFOV(this._player.getZ()).compute(
+			this._player.getX(), this._player.getY(),
+			this._player.getSightRadius(),
+			function(x, y, radius, visibility) {
+				visibleCells[x + ',' + y] = true;
+			});
+
 		for (var x=topLeftX; x < topLeftX + screenWidth; x++) {
 			for (var y=topLeftY; y < topLeftY + screenHeight; y++) {
-				// Fetch the glyph and draw it
-				var tile = this._map.getTile(x, y, this._player.getZ());
-				// Subtract topLeft value for rendering (because the screen is still at 0,0 even if the map is at 20,20)
-				display.draw(x - topLeftX, 
-							 y - topLeftY, 
-							 tile.getChar(), 
-							 tile.getForeground(), 
-							 tile.getBackground());
+				if (visibleCells[x + ',' + y]) {
+					// Fetch the glyph and draw it
+					var tile = this._map.getTile(x, y, this._player.getZ());
+					// Subtract topLeft value for rendering (because the screen is still at 0,0 even if the map is at 20,20)
+					display.draw(x - topLeftX, 
+								 y - topLeftY, 
+								 tile.getChar(), 
+								 tile.getForeground(), 
+								 tile.getBackground());
+				}
 			}
 		}
 
@@ -81,11 +93,13 @@ Game.Screen.playScreen = {
 				entity.getX() < topLeftX + screenWidth &&
 				entity.getY() < topLeftY + screenHeight &&
 				entity.getZ() == this._player.getZ()) {
-				display.draw(entity.getX() - topLeftX,
-							 entity.getY() - topLeftY,
-							 entity.getChar(),
-							 entity.getForeground(),
-							 entity.getBackground());
+				if (visibleCells[entity.getX() + ',' + entity.getY()]) {
+					display.draw(entity.getX() - topLeftX,
+								 entity.getY() - topLeftY,
+								 entity.getChar(),
+								 entity.getForeground(),
+								 entity.getBackground());
+				}
 			}
 		}
 

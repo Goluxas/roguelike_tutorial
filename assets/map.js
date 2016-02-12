@@ -20,6 +20,10 @@ Game.Map = function(tiles, player) {
 			this.addEntityAtRandomPosition(new Game.Entity(Game.FungusTemplate), z);
 		}
 	}
+
+	// set up the field of visions
+	this._fov = [];
+	this.setupFOV();
 };
 
 // Standard getters
@@ -38,6 +42,31 @@ Game.Map.prototype.getEntities = function() {
 Game.Map.prototype.getEngine = function() {
 	return this._engine;
 };
+
+Game.Map.prototype.setupFOV = function() {
+	// Keep 'this' in the 'map' variable so that we don't lose it
+	var map = this;
+
+	// Iterate through each depth level and set up the field of vision
+	for (var z=0; z < this._depth; z++) {
+		// We have to put the following code in its own scope to prevent
+		// the depth variable from being hoisted out of the loop
+		(function() {
+			// For each depth we need to create a callback which figures
+			// out if light can pass through a given tile
+			// Topology 4 is a diamond shape FOV
+			var depth = z;
+			map._fov.push(
+				new ROT.FOV.DiscreteShadowcasting(function(x, y) {
+					return !map.getTile(x, y, depth).isBlockingLight();
+				}, {topology: 4}));
+		})();
+	}
+}
+
+Game.Map.prototype.getFOV = function(depth) {
+	return this._fov[depth];
+}
 
 Game.Map.prototype.dig = function(x, y, z) {
 	// If the tile is diggable, update it to a floor
