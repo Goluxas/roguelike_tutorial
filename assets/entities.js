@@ -2,68 +2,19 @@
 Game.Mixins = {};
 
 // MIXINS
-// Define our Moveable mixin
-Game.Mixins.Moveable = {
-	name: 'Moveable',
-	tryMove: function(x, y, z, map) {
-
-		var map = this.getMap();
-		// Nice thing about getTile(): it returns a null tile if out of bounds
-		// Null Tiles are not walkable or diggable, so the move is illegal
-		
-		// Must use staring Z
-		var tile = map.getTile(x, y, this.getZ());
-		var target = map.getEntityAt(x, y, this.getZ());
-
-		// If our z level changed, check if we are on stair
-		if (z < this.getZ()) {
-			if (tile != Game.Tile.stairsUpTile) {
-				Game.sendMessage(this, "You can't go up here!");
-			} else {
-				Game.sendMessage(this, "You ascend to level %d!", [z+1]);
-				this.setPosition(x, y, z);
-			}
-		} else if (z > this.getZ()) {
-			if (tile != Game.Tile.stairsDownTile) {
-				Game.sendMessage(this, "You can't go down here!");
-			} else {
-				Game.sendMessage(this, "You descend to level %d!", [z+1]);
-				this.setPosition(x, y, z);
-			}
-		}
-
-		// If there's an entity, can't walk through it
-		else if (target) {
-			// If we are an attacker, try to attack
-			if (this.hasMixin('Attacker')) {
-				this.attack(target);
-				return true;
-			} else {
-				return false;
-			}
-		}
-		
-		// Check if we can walk and the tile and simply walk if so
-		else if (tile.isWalkable()) {
-			this.setPosition(x, y, z);
-			return true;
-		}
-		//
-		// Check if the tile is diggable and if so dig it
-		else if (tile.isDiggable()) {
-			map.dig(x, y, z);
-			return true;
-		}
-		// Otherwise it's an illegal move
-		return false;
-	}
-}
 
 // Main Player's actor mixin
 Game.Mixins.PlayerActor = {
 	name: 'PlayerActor',
 	groupName: 'Actor',
 	act: function() {
+		// Detect if the game is over
+		if (this.getHP() < 1) {
+			Game.Screen.playScreen.setGameEnded(true);
+			// Send a last message to the player
+			Game.sendMessage(this, 'You have died... Press [Enter] to continue!');
+		}
+
 		// Re-render the screen
 		Game.refresh();
 
@@ -136,9 +87,14 @@ Game.Mixins.Destructible = {
 		// If have 0 or less hp, then remove
 		if (this._hp <= 0) {
 			Game.sendMessage(attacker, 'You kill the %s!', [this.getName()]);
-			Game.sendMessage(this, 'You die!');
 
-			this.getMap().removeEntity(this);
+			// Check if the player died
+			// If so, call their act method to prompt the user
+			if (this.hasMixin(Game.Mixins.PlayerActor)) {
+				this.act();
+			} else {
+				this.getMap().removeEntity(this);
+			}
 		}
 	}
 }
@@ -194,6 +150,22 @@ Game.Mixins.Sight = {
 	}
 }
 
+Game.Mixins.WanderActor = {
+	name: 'WanderActor',
+	groupName: 'Actor',
+	act: function() {
+		// Flip coin to determine if moving by 1 in the positive or negative direction
+		var moveOffset = (Math.round(Math.random()) === 1) ? 1 : -1;
+
+		// Flip coin to determine if moving in x or y direction
+		if (Math.round(Math.random()) === 1) {
+			this.tryMove(this.getX() + moveOffset, this.getY(), this.getZ());
+		} else {
+			this.tryMove(this.getX(), this.getY() + moveOffset, this.getZ());
+		}
+	}
+}
+
 
 // Message sending function
 Game.sendMessage = function(recipient, message, args) {
@@ -235,8 +207,7 @@ Game.PlayerTemplate = {
 	maxHP: 40,
 	attackValue: 10,
 	sightRadius: 6,
-	mixins: [Game.Mixins.Moveable, 
-			 Game.Mixins.PlayerActor,
+	mixins: [Game.Mixins.PlayerActor,
 			 Game.Mixins.Destructible,
 			 Game.Mixins.Attacker,
 			 Game.Mixins.MessageRecipient,
@@ -250,5 +221,29 @@ Game.FungusTemplate = {
 	foreground: 'green',
 	maxHP: 10,
 	mixins: [Game.Mixins.FungusActor,
+			 Game.Mixins.Destructible]
+}
+
+// Bat
+Game.BatTemplate = {
+	name: 'bat',
+	character: 'B',
+	foreground: 'white',
+	maxHP: 5,
+	attackValue: 4,
+	mixins: [Game.Mixins.WanderActor,
+			 Game.Mixins.Attacker,
+			 Game.Mixins.Destructible]
+}
+
+// Newt
+Game.NewtTemplate = {
+	name: 'newt',
+	character: ':',
+	foreground: 'yellow',
+	maxHP: 3,
+	attackValue: 2,
+	mixins: [Game.Mixins.WanderActor,
+			 Game.Mixins.Attacker,
 			 Game.Mixins.Destructible]
 }

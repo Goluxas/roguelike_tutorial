@@ -58,9 +58,19 @@ Game.Entity.prototype.setMap = function(map) {
 	this._map = map;
 }
 Game.Entity.prototype.setPosition = function(x, y, z) {
+	var oldX = this._x;
+	var oldY = this._y;
+	var oldZ = this._z;
+
+	// Update position
 	this._x = x;
 	this._y = y;
 	this._z = z;
+
+	// If the entity is on a map, notify the map that the entity has moved
+	if (this._map) {
+		this._map.updateEntityPosition(this, oldX, oldY, oldZ);
+	}
 }
 
 Game.Entity.prototype.getName = function() {
@@ -86,4 +96,65 @@ Game.Entity.prototype.hasMixin = function(obj) {
 	} else {
 		return this._attachedMixins[obj] || this._attachedMixinGroups[obj];
 	}
+}
+
+Game.Entity.prototype.tryMove = function(x, y, z, map) {
+	var map = this.getMap();
+	// Nice thing about getTile(): it returns a null tile if out of bounds
+	// Null Tiles are not walkable or diggable, so the move is illegal
+	
+	// Must use staring Z
+	var tile = map.getTile(x, y, this.getZ());
+	var target = map.getEntityAt(x, y, this.getZ());
+
+	// If our z level changed, check if we are on stair
+	if (z < this.getZ()) {
+		if (tile != Game.Tile.stairsUpTile) {
+			Game.sendMessage(this, "You can't go up here!");
+		} else {
+			Game.sendMessage(this, "You ascend to level %d!", [z+1]);
+			this.setPosition(x, y, z);
+		}
+	} else if (z > this.getZ()) {
+		if (tile != Game.Tile.stairsDownTile) {
+			Game.sendMessage(this, "You can't go down here!");
+		} else {
+			Game.sendMessage(this, "You descend to level %d!", [z+1]);
+			this.setPosition(x, y, z);
+		}
+	}
+
+	// If there's an entity, can't walk through it
+	else if (target) {
+		// If we are an attacker, try to attack
+		// But only if one of the entities is the player
+		if (this.hasMixin('Attacker') && 
+			(this.hasMixin(Game.Mixins.PlayerActor) ||
+			 target.hasMixin(Game.Mixins.PlayerActor))) {
+			this.attack(target);
+			return true;
+		} else {
+			// If not, nothing we can do, but we can't move to tile
+			return false;
+		}
+	}
+	
+	// Check if we can walk and the tile and simply walk if so
+	else if (tile.isWalkable()) {
+		this.setPosition(x, y, z);
+		return true;
+	}
+	//
+	// Check if the tile is diggable and if so dig it
+	else if (tile.isDiggable()) {
+		// Only the player can dig
+		if (this.hasMixin(Game.Mixins.PlayerActor)) {
+			map.dig(x, y, z);
+			return true;
+		}
+
+		return false;
+	}
+	// Otherwise it's an illegal move
+	return false;
 }
