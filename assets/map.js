@@ -24,6 +24,10 @@ Game.Map = function(tiles, player) {
 	// set up the field of visions
 	this._fov = [];
 	this.setupFOV();
+
+	// set up the explored array
+	this._explored = new Array(this._depth);
+	this._setupExploredArray();
 };
 
 // Standard getters
@@ -42,6 +46,19 @@ Game.Map.prototype.getEntities = function() {
 Game.Map.prototype.getEngine = function() {
 	return this._engine;
 };
+Game.Map.prototype.setExplored = function(x, y, z, state) {
+	// Only update if the tile is inbounds
+	if (this.getTile(x, y, z) !== Game.Tile.nullTile) {
+		this._explored[z][x][y] = true;
+	}
+}
+Game.Map.prototype.isExplored = function(x, y, z) {
+	if (this.getTile(x, y, z) != Game.Tile.nullTile) {
+		return this._explored[z][x][y];
+	} else {
+		return false;
+	}
+}
 
 Game.Map.prototype.setupFOV = function() {
 	// Keep 'this' in the 'map' variable so that we don't lose it
@@ -67,6 +84,18 @@ Game.Map.prototype.setupFOV = function() {
 Game.Map.prototype.getFOV = function(depth) {
 	return this._fov[depth];
 }
+
+Game.Map.prototype._setupExploredArray = function() {
+	for (var z=0; z < this._depth; z++) {
+		this._explored[z] = new Array(this._width);
+		for (var x=0; x < this._width; x++) {
+			this._explored[z][x] = new Array(this._height);
+			for( var y=0; y < this._height; y++) {
+				this._explored[z][x][y] = false;
+			}
+		}
+	}
+};
 
 Game.Map.prototype.dig = function(x, y, z) {
 	// If the tile is diggable, update it to a floor
